@@ -1,12 +1,11 @@
 from textnode import *
+from constants import *
+from markdown_parser import *
 
 def main():
-    test_node = TextNode("someText", "someType", "https://wallawashington.ca")
-    none_node = TextNode("Nope", "Nah fam")
-
-    print(test_node)
-    print(none_node)
+    node = TextNode("This is a text node with a `code block` word", TEXT_TYPE_TEXT)
+    print(node)
+    print(f"split nodes - {split_nodes_by_delimitter([node], MARKDOWN_CODE)}")
 
 if(__name__ == "__main__"):
     main()
-    print("hello world")

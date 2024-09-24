@@ -1,4 +1,6 @@
 from htmlnode import HtmlNode
+from textnode import TextNode
+from constants import *
 
 class LeafNode(HtmlNode):
     def __init__(self, tag=None, value=None, props=None):
@@ -10,7 +12,6 @@ class LeafNode(HtmlNode):
         elif(self.tag == None):
             return self.value
         else:    
-
             leaf_node = f"<{self.tag}" 
             
             if(self.props != None and len(self.props) > 0):
@@ -20,4 +21,3 @@ class LeafNode(HtmlNode):
             leaf_node += f">{self.value}</{self.tag}>"
 
             return leaf_node
-            
