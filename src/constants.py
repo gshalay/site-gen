@@ -21,16 +21,15 @@ MARKDOWN_IMAGE = "^\[.*\]\(.*\)$"
 
 MARKDOWN_DELIMS = { 
         "h6" : MARKDOWN_H6,
-        "h6" : MARKDOWN_H5,
-        "h6" : MARKDOWN_H1, 
-        "h6" : MARKDOWN_H4,
-        "h6" : MARKDOWN_H3,
-        "h6" : MARKDOWN_H2,
-        "h6" : MARKDOWN_H1,
-        "h6" : MARKDOWN_BOLD, 
-        "h6" : MARKDOWN_ITALIC,
-        "h6" : MARKDOWN_ITALIC2,
-        "h6" : MARKDOWN_BLOCKQUOTE,
-        "h6" : MARKDOWN_CODE 
+        "h5" : MARKDOWN_H5, 
+        "h4" : MARKDOWN_H4,
+        "h3" : MARKDOWN_H3,
+        "h2" : MARKDOWN_H2,
+        "h1" : MARKDOWN_H1,
+        "bold" : MARKDOWN_BOLD, 
+        "italic" : MARKDOWN_ITALIC,
+        "italic2" : MARKDOWN_ITALIC2,
+        "blockquote" : MARKDOWN_BLOCKQUOTE,
+        "code" : MARKDOWN_CODE 
 }
 
