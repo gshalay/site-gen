@@ -1,6 +1,9 @@
 from constants import *
 from leafnode import LeafNode
 from textnode import TextNode
+import itertools as it
+import collections as ct
+import more_itertools as mit
 import re
 
 def text_node_to_html_node(text_node):
@@ -43,11 +46,21 @@ def convert_image_to_text_token(image_text):
 
     return TextNode(bracket_text, tag_type, paren_text)
 
-def filter_duplicate_asterisks(italic_list, bold_list):
-    unique_italics = []
+def in_collection(list_of_lists, search_item):
+    for a_list in list_of_lists:
+        if(search_item in a_list):
+            return True
+    
+    return False
+        
 
-    for italic_pos in italic_list:
-        if(not (italic_pos in bold_list) and not (italic_pos - 1 in italic_list)):
+def filter_duplicate_asterisks(italic_lists, bold_lists):
+    unique_italics = []
+    flat_italic_list = list(it.chain(*italic_lists)) if(isinstance(italic_lists[0], list)) else italic_lists
+    flat_bold_list = flat_italic_list = list(it.chain(*bold_lists)) if(isinstance(bold_lists[0], list)) else bold_lists
+
+    for italic_pos in italic_lists:
+        if(not (italic_pos in flat_bold_list) and not (italic_pos - 1 in flat_italic_list)):
             unique_italics.append(italic_pos)
 
     return unique_italics
@@ -63,16 +76,21 @@ def get_delim_postitions(text):
             if(delim == MARKDOWN_ITALIC and delim_idxs.get(MARKDOWN_BOLD) != None):
                 filtered_italics = filter_duplicate_asterisks(delim_positions, delim_idxs[MARKDOWN_BOLD])
                 if(filtered_italics != []):
-                    delim_idxs[delim] = filtered_italics
+                    delim_idxs[delim] = list(mit.chunked(filtered_italics, 2))
 
             else:
-                delim_idxs[delim] = delim_positions
-    
-    # print("Found Delims")
-    # for delim, foundIdxs in delim_idxs.items():
-    #     print(f"delim {delim} found at idxs: {foundIdxs}")
+                delim_idxs[delim] = list(mit.chunked(delim_positions, 2))
     
     return delim_idxs
+
+def get_min_delim_pos(dict_items):
+    current_min = float('inf')
+    for key, value in dict_items:
+        for l in value:
+            if(min(l) < current_min):
+                current_min = min(l)
+    
+    return current_min
 
 def split_nodes_delimitter(old_nodes, delimitter, text_type):
     new_nodes = []
@@ -83,86 +101,47 @@ def split_nodes_delimitter(old_nodes, delimitter, text_type):
                 delim_poses = dict(sorted(get_delim_postitions(old_node.text).items(), key=lambda item: item[1][0]))
 
                 if(delim_poses != None and len(delim_poses) > 0):
-                    is_delim_segment = delim_poses.get(0)[0] == 0
                     last_upper = -1
+
+                    min_delim_pos = get_min_delim_pos(delim_poses.items())
+
+                    if(min_delim_pos > 0):
+                        new_nodes.append(TextNode(old_node.text[:min_delim_pos], TEXT_TYPE_TEXT))
+
                     for delim, idxs in delim_poses.items():
-                        lower = idxs[0] if(last_upper == -1) else last_upper
-                        upper = 
+                        for pos_pair in idxs:
+                            delim_offset = 2 if(delim == MARKDOWN_BOLD) else 1
+                            if(last_upper != -1):
+                                new_nodes.append(TextNode(old_node.text[last_upper:pos_pair[0]], TEXT_TYPE_TEXT))
 
-                        if(last_upper != -1): 
-                            if(is_delim_segment):
-                                segment = old_node.text[idxs[0] - 1:idxs[1]]
-                                last_upper = idxs[1]
-
-                    new_nodes.append(TextNode(, markdown_delim_to_text_type(delim)))
+                            new_nodes.append(TextNode(old_node.text[(pos_pair[0] + delim_offset):pos_pair[1]], markdown_delim_to_text_type(delim)))                            
+                            last_upper = pos_pair[1] + delim_offset
                     
-
-                text_segments = old_node.text.split(delimitter)
-                delim_proc = len(text_segments) % 2 == 0 or not bool(text_segments[0])
-
-                for segment in text_segments:
-                    if(bool(segment)):
-                        found_delims = [dlm for dlm in MARKDOWN_DELIMS.values() if dlm in segment]
-
-                        if(len(found_delims) > 0):
-                            for currentDlm in found_delims:
-                                new_text_type = markdown_delim_to_text_type(currentDlm)
-                                new_nodes += split_nodes_delimitter([TextNode(segment, new_text_type)], currentDlm, new_text_type)
-                                break
-                        else:
-                            if(delim_proc):
-                                new_nodes.append(TextNode(segment, text_type))
-                                delim_proc = False
-                            else:
-                                new_nodes.append(TextNode(segment, TEXT_TYPE_TEXT))
-                                delim_proc = True
+                    if(last_upper < len(old_node.text)):
+                        new_nodes.append(TextNode(old_node.text[last_upper:], TEXT_TYPE_TEXT))
 
     return new_nodes
 
-# def split_nodes_by_delimitter(old_nodes):
-#     new_nodes = []
-    
-#     for old_node in old_nodes:
-#         if(old_node.text != None):
-#             text_segments = old_node.text.split()
+def extract_markdown_images(text):
+    # Return a list of tuples (alt text, url)
+    image_tuples = []
+    image_matches = re.findall(MARKDOWN_IMAGE, text)
 
-#             # res = get_delim_postitions(old_node.text)
-#             # print(f"delims_poses - {res}")
-#             for delim in MARKDOWN_DELIMS.values():
-#                 if(old_node.text != None and delim in old_node.text 
-#                    and ((delim == MARKDOWN_BLOCKQUOTE) or (old_node.text.count(delim) > 1))):
-#                     # Only need one of the blockquote delimitter for the blockquote to be valid.       
-#                     delim_first = False
-#                     text_segments = old_node.text.split(delim)
+    for match in image_matches:
+        alt_text = match.substring(match.find("[") + 1, match.find("]"))
+        url_text = match.substring(match.find("(") + 1, match.find(")"))
+        image_tuples.append(tuple(alt_text, url_text))
 
-#                     # Then the matched tag starts with the first array element.
-#                     if(old_node.text.startswith(delim)):
-#                         delim_first = True
-                    
-#                     # The order that the delimitters are checked will matter. Check larger ones first. e.g. ###### before ##### (h6 before h5).
-#                     for x in range(0, len(text_segments)):
-#                         if(x % 2 == 0):
-#                             if(delim_first):
-#                                 if(text_segments[x].contains(any(MARKDOWN_DELIMS.values()))):
-#                                     new_nodes += split_nodes_by_delimitter(new_nodes)
-#                                 else:
-#                                     new_nodes.append(TextNode(text_segments[x], markdown_delim_to_text_type(delim)))
-#                             else:
-#                                 new_nodes.append(TextNode(text_segments[x], TEXT_TYPE_TEXT))
-#                         else:
-#                             if(not delim_first):
-#                                 if(text_segments[x].contains(any(MARKDOWN_DELIMS.values()))):
-#                                     new_nodes += split_nodes_by_delimitter(new_nodes)
-#                                 else:
-#                                     new_nodes.append(TextNode(text_segments[x], markdown_delim_to_text_type(delim)))
-#                             else:
-#                                 new_nodes.append(TextNode(text_segments[x], TEXT_TYPE_TEXT))
+    return image_tuples
 
-#     return new_nodes
+def extract_markdown_links(text):
+    # Return a list of tuples (anchor text, url)
+    link_tuples = []
+    link_matches = re.findall(MARKDOWN_LINK, text)
 
+    for match in link_matches:
+        anchor_text = match.substring(match.find("[") + 1, match.find("]"))
+        url_text = match.substring(match.find("(") + 1, match.find(")"))
+        link_tuples.append(tuple(anchor_text, url_text))
 
-# node = TextNode("This is a text node with a `code block` word", TEXT_TYPE_TEXT)
-# # node2 = TextNode("**There once was a man from Peru *He slipped and fell one day and lost his shoe* `which made him quite blue`, now a man with one shoe**", TEXT_TYPE_BOLD)
-# # node3 = TextNode("There once was a man from Tahiti > He climbed a cliff and watched the sunset. *Then came night `then midnight` then dawn `then morning once more`* C'est Fini.", MARKDOWN_BLOCKQUOTE)
-
-# print(f"res - {split_nodes_delimitter([node], MARKDOWN_CODE, TEXT_TYPE_CODE)}")
+    return link_tuples

@@ -18,6 +18,7 @@ MARKDOWN_BLOCKQUOTE = ">"
 MARKDOWN_CODE = "`" # one or more I guess.
 
 MARKDOWN_IMAGE = "^\[.*\]\(.*\)$"
+MARKDOWN_LINK = "^\!\[.*\]\(.*\)$"
 
 MARKDOWN_DELIMS = { 
         "h6" : MARKDOWN_H6,
