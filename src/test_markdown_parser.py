@@ -8,6 +8,8 @@ from markdown_parser import split_nodes_delimitter
 from markdown_parser import get_delim_postitions
 from markdown_parser import extract_markdown_images
 from markdown_parser import extract_markdown_links
+from markdown_parser import split_nodes_image
+from markdown_parser import split_nodes_link
 
 class TestMarkdownParser(unittest.TestCase):
     def test_text_node_to_html_node(self):
@@ -188,6 +190,211 @@ def test_extract_markdown_links(self):
 
      self.assertEquals(actual1, expected1)
      self.assertEquals(actual2, expected2)
+
+def test_split_link_nodes(self):
+     link_nodes1 = [
+          TextNode("This is text with a link ![to boot dev](https://www.boot.dev) and [to youtube](https://www.youtube.com/@bootdotdev)",
+               TEXT_TYPE_TEXT)
+     ]
+
+     link_nodes2 = [
+          TextNode("[hello there](www.mynamejeff.com) what a weird name for a site [tellmeaboutit](https://tellmeaboutit.org) nah maybe later. [haveityourway](https://www.burgerking.ca)",
+               TEXT_TYPE_TEXT)
+     ]
+
+     link_nodes3 = [
+          TextNode("![hello there](www.mynamejeff.com) what a weird name for a site [tellmeaboutit](https://tellmeaboutit.org) nah maybe later. [haveityourway](https://www.burgerking.ca)",
+               TEXT_TYPE_TEXT)
+     ]
+
+     link_nodes4 = [
+          TextNode("[hello there](www.mynamejeff.com) what a weird name for a site [tellmeaboutit](https://tellmeaboutit.org) nah maybe later. ![haveityourway](https://www.burgerking.ca)",
+               TEXT_TYPE_TEXT)
+     ]
+
+     link_nodes5 = [
+          TextNode("![hello there](www.mynamejeff.com) what a weird name for a site [tellmeaboutit](https://tellmeaboutit.org) nah maybe later. ![haveityourway](https://www.burgerking.ca)",
+               TEXT_TYPE_TEXT)
+     ]
+
+     link_nodes6 = [
+          TextNode("![hello there](www.mynamejeff.com) what a weird name for a site [tellmeaboutit](https://tellmeaboutit.org) nah maybe later. [haveityourway](https://www.burgerking.ca)",
+               TEXT_TYPE_TEXT)
+     ]
+
+     link_nodes7 = [
+          TextNode("[hello there](www.mynamejeff.com)[tellmeaboutit](https://tellmeaboutit.org)[haveityourway](https://www.burgerking.ca)",
+               TEXT_TYPE_TEXT)
+     ]
+
+     expected1 = [
+          TextNode("This is text with a link ", TEXT_TYPE_TEXT),
+          TextNode("to boot dev", TEXT_TYPE_LINK, "https://www.boot.dev"),
+          TextNode(" and ", TEXT_TYPE_TEXT),
+          TextNode("to youtube", TEXT_TYPE_LINK, "https://www.youtube.com/@bootdotdev"),
+     ]
+
+     expected2 = [
+          TextNode("hello there", TEXT_TYPE_LINK, "www.mynamejeff.com"),
+          TextNode(" what a weird name for a site ", TEXT_TYPE_TEXT),
+          TextNode("tellmeaboutit", TEXT_TYPE_LINK, "https://tellmeaboutit.org"),
+          TextNode(" nah maybe later. ", TEXT_TYPE_TEXT),
+          TextNode("haveityourway", TEXT_TYPE_LINK, "https://www.burgerking.ca"),
+     ]
+
+     expected3 = [
+          TextNode("[hello there](www.mynamejeff.com) what a weird name for a site ", TEXT_TYPE_TEXT),
+          TextNode("tellmeaboutit", TEXT_TYPE_LINK, "https://tellmeaboutit.org"),
+          TextNode(" nah maybe later. ", TEXT_TYPE_TEXT),
+          TextNode("haveityourway", TEXT_TYPE_LINK, "https://www.burgerking.ca"),
+     ]
+
+     expected4 = [
+          TextNode("hello there", TEXT_TYPE_LINK, "www.mynamejeff.com"),
+          TextNode(" what a weird name for a site ", TEXT_TYPE_TEXT),
+          TextNode("tellmeaboutit", TEXT_TYPE_LINK, "https://tellmeaboutit.org"),
+          TextNode(" nah maybe later. [haveityourway](https://www.burgerking.ca)", TEXT_TYPE_TEXT),
+     ]
+
+     expected5 = [
+          TextNode("[hello there](www.mynamejeff.com) what a weird name for a site [tellmeaboutit](https://tellmeaboutit.org) nah maybe later. ", TEXT_TYPE_TEXT),
+          TextNode("haveityourway", TEXT_TYPE_LINK, "https://www.burgerking.ca"),
+     ]
+
+     expected6 = [
+          TextNode("![hello there](www.mynamejeff.com) what a weird name for a site ![tellmeaboutit](https://tellmeaboutit.org) nah maybe later. [haveityourway](https://www.burgerking.ca)", TEXT_TYPE_TEXT)
+     ]
+
+     expected7 = [
+          TextNode("hello there", TEXT_TYPE_LINK, "www.mynamejeff.com"),
+          TextNode("tellmeaboutit", TEXT_TYPE_LINK, "https://tellmeaboutit.org"),
+          TextNode("haveityourway", TEXT_TYPE_LINK, "https://www.burgerking.ca")
+     ]
+
+     self.assertEqual(split_nodes_link(link_nodes1), expected1)
+     self.assertEqual(split_nodes_link(link_nodes2), expected2)
+     self.assertEqual(split_nodes_link(link_nodes3), expected3)
+     self.assertEqual(split_nodes_link(link_nodes4), expected4)
+     self.assertEqual(split_nodes_link(link_nodes5), expected5)
+     self.assertEqual(split_nodes_link(link_nodes6), expected6)
+     self.assertEqual(split_nodes_link(link_nodes7), expected7)
+
+def test_split_image_nodes(self):
+     image_nodes1 = [
+          TextNode("This is text with a link [to boot dev](https://www.boot.dev) and ![to youtube](https://www.youtube.com/@bootdotdev)",
+               TEXT_TYPE_TEXT)
+     ]
+
+     image_nodes2 = [
+          TextNode("![hello there](www.mynamejeff.com) what a weird name for a site ![tellmeaboutit](https://tellmeaboutit.org) nah maybe later. ![haveityourway](https://www.burgerking.ca)",
+               TEXT_TYPE_TEXT)
+     ]
+
+     image_nodes3 = [
+          TextNode("[hello there](www.mynamejeff.com) what a weird name for a site ![tellmeaboutit](https://tellmeaboutit.org) nah maybe later. ![haveityourway](https://www.burgerking.ca)",
+               TEXT_TYPE_TEXT)
+     ]
+
+     image_nodes4 = [
+          TextNode("![hello there](www.mynamejeff.com) what a weird name for a site ![tellmeaboutit](https://tellmeaboutit.org) nah maybe later. [haveityourway](https://www.burgerking.ca)",
+               TEXT_TYPE_TEXT)
+     ]
+
+     image_nodes5 = [
+          TextNode("[hello there](www.mynamejeff.com) what a weird name for a site ![tellmeaboutit](https://tellmeaboutit.org) nah maybe later. [haveityourway](https://www.burgerking.ca)",
+               TEXT_TYPE_TEXT)
+     ]
+
+     image_nodes6 = [
+          TextNode("[hello there](www.mynamejeff.com) what a weird name for a site [tellmeaboutit](https://tellmeaboutit.org) nah maybe later. ![haveityourway](https://www.burgerking.ca)",
+               TEXT_TYPE_TEXT)
+     ]
+
+     image_nodes7 = [
+          TextNode("![hello there](www.mynamejeff.com)![tellmeaboutit](https://tellmeaboutit.org)![haveityourway](https://www.burgerking.ca)",
+               TEXT_TYPE_TEXT)
+     ]
+
+     expected1 = [
+          TextNode("This is text with a link ", TEXT_TYPE_TEXT),
+          TextNode("to boot dev", TEXT_TYPE_IMAGE, "https://www.boot.dev"),
+          TextNode(" and ", TEXT_TYPE_TEXT),
+          TextNode("to youtube", TEXT_TYPE_IMAGE, "https://www.youtube.com/@bootdotdev"),
+     ]
+
+     expected2 = [
+          TextNode("hello there", TEXT_TYPE_IMAGE, "www.mynamejeff.com"),
+          TextNode(" what a weird name for a site ", TEXT_TYPE_TEXT),
+          TextNode("tellmeaboutit", TEXT_TYPE_IMAGE, "https://tellmeaboutit.org"),
+          TextNode(" nah maybe later. ", TEXT_TYPE_TEXT),
+          TextNode("haveityourway", TEXT_TYPE_IMAGE, "https://www.burgerking.ca"),
+     ]
+
+     expected3 = [
+          TextNode("[hello there](www.mynamejeff.com) what a weird name for a site ", TEXT_TYPE_TEXT),
+          TextNode("tellmeaboutit", TEXT_TYPE_IMAGE, "https://tellmeaboutit.org"),
+          TextNode(" nah maybe later. ", TEXT_TYPE_TEXT),
+          TextNode("haveityourway", TEXT_TYPE_IMAGE, "https://www.burgerking.ca"),
+     ]
+
+     expected4 = [
+          TextNode("hello there", TEXT_TYPE_IMAGE, "www.mynamejeff.com"),
+          TextNode(" what a weird name for a site ", TEXT_TYPE_TEXT),
+          TextNode("tellmeaboutit", TEXT_TYPE_IMAGE, "https://tellmeaboutit.org"),
+          TextNode(" nah maybe later. [haveityourway](https://www.burgerking.ca)", TEXT_TYPE_TEXT),
+     ]
+
+     expected5 = [
+          TextNode("[hello there](www.mynamejeff.com) what a weird name for a site [tellmeaboutit](https://tellmeaboutit.org) nah maybe later. ", TEXT_TYPE_TEXT),
+          TextNode("haveityourway", TEXT_TYPE_IMAGE, "https://www.burgerking.ca"),
+     ]
+
+     expected6 = [
+          TextNode("[hello there](www.mynamejeff.com) what a weird name for a site [tellmeaboutit](https://tellmeaboutit.org) nah maybe later. ![haveityourway](https://www.burgerking.ca)", TEXT_TYPE_TEXT)
+     ]
+
+     expected7 = [
+          TextNode("hello there", TEXT_TYPE_IMAGE, "www.mynamejeff.com"),
+          TextNode("tellmeaboutit", TEXT_TYPE_IMAGE, "https://tellmeaboutit.org"),
+          TextNode("haveityourway", TEXT_TYPE_IMAGE, "https://www.burgerking.ca")
+     ]
+
+     self.assertEqual(split_nodes_image(image_nodes1), expected1)
+     self.assertEqual(split_nodes_image(image_nodes2), expected2)
+     self.assertEqual(split_nodes_image(image_nodes3), expected3)
+     self.assertEqual(split_nodes_image(image_nodes4), expected4)
+     self.assertEqual(split_nodes_image(image_nodes5), expected5)
+     self.assertEqual(split_nodes_image(image_nodes6), expected6)
+     self.assertEqual(split_nodes_image(image_nodes7), expected7)
+     
+# ![hello there](www.mynamejeff.com) what a weird name for a site ![tellmeaboutit](https://tellmeaboutit.org) nah maybe later. ![haveityourway](https://www.burgerking.ca)
+# [hello there](www.mynamejeff.com) what a weird name for a site ![tellmeaboutit](https://tellmeaboutit.org) nah maybe later. ![haveityourway](https://www.burgerking.ca)
+# ![hello there](www.mynamejeff.com) what a weird name for a site ![tellmeaboutit](https://tellmeaboutit.org) nah maybe later. [haveityourway](https://www.burgerking.ca)
+# [hello there](www.mynamejeff.com) what a weird name for a site ![tellmeaboutit](https://tellmeaboutit.org) nah maybe later. [haveityourway](https://www.burgerking.ca)
+# [hello there](www.mynamejeff.com) what a weird name for a site [tellmeaboutit](https://tellmeaboutit.org) nah maybe later. ![haveityourway](https://www.burgerking.ca)
+# ![hello there](www.mynamejeff.com)![tellmeaboutit](https://tellmeaboutit.org)![haveityourway](https://www.burgerking.ca)
+     
+
+
+
+
+links = TextNode(
+    "This is text with a link [to boot dev](https://www.boot.dev) and [to youtube](https://www.youtube.com/@bootdotdev)",
+    TEXT_TYPE_TEXT,
+)
+
+# new_nodes = split_nodes_link([links])
+# new_nodes = split_nodes_image([images])
+
+
+# [
+#     TextNode("This is text with a link ", text_type_text),
+#     TextNode("to boot dev", text_type_link, "https://www.boot.dev"),
+#     TextNode(" and ", text_type_text),
+#     TextNode(
+#         "to youtube", text_type_link, "https://www.youtube.com/@bootdotdev"
+#     ),
+# ]
 
 
 if(__name__ == "__main__"):

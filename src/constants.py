@@ -17,8 +17,12 @@ MARKDOWN_ITALIC2 = "_"
 MARKDOWN_BLOCKQUOTE = ">"
 MARKDOWN_CODE = "`" # one or more I guess.
 
-MARKDOWN_IMAGE = "^\[.*\]\(.*\)$"
-MARKDOWN_LINK = "^\!\[.*\]\(.*\)$"
+MARKDOWN_IMAGE_OR_LINK = "\[.*?\]\(.*?\)"
+
+# MARKDOWN_REGEXES = {
+#     "img" : MARKDOWN_IMAGE,
+#     "link" : MARKDOWN_LINK
+# }
 
 MARKDOWN_DELIMS = { 
         "h6" : MARKDOWN_H6,

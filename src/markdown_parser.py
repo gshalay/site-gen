@@ -39,12 +39,53 @@ def markdown_delim_to_text_type(delim : str):
     else:
         raise ValueError(f"Unknown markdown delimitter '{delim}'.")
 
-def convert_image_to_text_token(image_text):
-    bracket_text = image_text.substring(image_text.find("[") + 1, image_text.find("]"))
-    paren_text = image_text.substring(image_text.find("(") + 1, image_text.find(")"))
+def image_or_link_to_textnode(image_text, is_link=True):
     tag_type = TEXT_TYPE_IMAGE if(image_text.startswith("!")) else TEXT_TYPE_LINK
+    prefix = ("" if(is_link) else "\!") + "["
+    bracket_text = image_text[image_text.find(prefix) + len(prefix):image_text.find("]")]
+    paren_text = image_text[image_text.find("(") + 1:image_text.find(")")]
 
     return TextNode(bracket_text, tag_type, paren_text)
+
+
+def split_nodes_image(old_nodes):
+    new_nodes = []
+
+    for old_node in old_nodes:
+        if(old_node.text):
+            splits = re.split("(" + ("\!" + MARKDOWN_IMAGE_OR_LINK) + ")", old_node.text)
+            proc_image = bool((len(splits) > 0 and splits[0] and re.search("\!" + MARKDOWN_IMAGE_OR_LINK, splits[0]) != None))
+
+            for split in splits:
+                if(split):
+                    if(re.search("\!" + MARKDOWN_IMAGE_OR_LINK, split) != None and proc_image):
+                        new_nodes.append(image_or_link_to_textnode(split, False))
+                    else:
+                        new_nodes.append(TextNode(split, TEXT_TYPE_TEXT))
+
+                    proc_image = not proc_image      
+
+    return new_nodes
+
+def split_nodes_link(old_nodes):
+    new_nodes = []
+
+    for old_node in old_nodes:
+        if(old_node.text):
+            splits = re.split("(" + MARKDOWN_IMAGE_OR_LINK + ")", old_node.text)
+            proc_image = bool(len(splits) > 0 and splits[0] and re.search(MARKDOWN_IMAGE_OR_LINK, splits[0]) != None)
+
+            for split in splits:
+                if(split):
+                    if(re.search(MARKDOWN_IMAGE_OR_LINK, split) != None and proc_image):
+                        new_nodes.append(image_or_link_to_textnode(split))
+                    else:
+                        new_nodes.append(TextNode(split, TEXT_TYPE_TEXT))
+
+                proc_image = not proc_image        
+
+    return new_nodes
+
 
 def in_collection(list_of_lists, search_item):
     for a_list in list_of_lists:
@@ -125,7 +166,7 @@ def split_nodes_delimitter(old_nodes, delimitter, text_type):
 def extract_markdown_images(text):
     # Return a list of tuples (alt text, url)
     image_tuples = []
-    image_matches = re.findall(MARKDOWN_IMAGE, text)
+    image_matches = re.findall("\!" + MARKDOWN_IMAGE_OR_LINK, text)
 
     for match in image_matches:
         alt_text = match.substring(match.find("[") + 1, match.find("]"))
@@ -137,7 +178,7 @@ def extract_markdown_images(text):
 def extract_markdown_links(text):
     # Return a list of tuples (anchor text, url)
     link_tuples = []
-    link_matches = re.findall(MARKDOWN_LINK, text)
+    link_matches = re.findall(MARKDOWN_IMAGE_OR_LINK, text)
 
     for match in link_matches:
         anchor_text = match.substring(match.find("[") + 1, match.find("]"))
