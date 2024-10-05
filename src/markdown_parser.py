@@ -186,3 +186,49 @@ def extract_markdown_links(text):
         link_tuples.append(tuple(anchor_text, url_text))
 
     return link_tuples
+
+def insert_items_at_idx(master_list, list_to_insert, insert_idx):
+    master_copy = master_list.copy()
+    current_insert_idx = insert_idx
+    
+    for insert_item in list_to_insert:
+        master_copy.insert(current_insert_idx, insert_item)
+        current_insert_idx += 1
+    
+    return master_copy
+
+def text_to_textnodes(text):
+    input_node = [TextNode(text, TEXT_TYPE_TEXT)]
+    new_nodes = []
+    
+    new_nodes = split_nodes_delimitter(input_node, MARKDOWN_BOLD, TEXT_TYPE_BOLD)
+    
+    for x in range(0, len(new_nodes)):
+        if(re.search("!" + MARKDOWN_IMAGE_OR_LINK, new_nodes[x].text) != -1):
+            popped_node = new_nodes.pop(x)
+            new_nodes = insert_items_at_idx(new_nodes, split_nodes_image([popped_node]), x)
+        elif(re.search(MARKDOWN_IMAGE_OR_LINK, new_nodes[x].text) != -1):
+            popped_node = new_nodes.pop(x)
+            new_nodes = insert_items_at_idx(new_nodes, split_nodes_link([popped_node]), x)
+
+    return new_nodes
+
+
+res = text_to_textnodes("This is **text** with an *italic* word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)")
+
+print()
+print(res)
+print()
+
+# [
+#     TextNode("This is ", text_type_text),
+#     TextNode("text", text_type_bold),
+#     TextNode(" with an ", text_type_text),
+#     TextNode("italic", text_type_italic),
+#     TextNode(" word and a ", text_type_text),
+#     TextNode("code block", text_type_code),
+#     TextNode(" and an ", text_type_text),
+#     TextNode("obi wan image", text_type_image, "https://i.imgur.com/fJRm4Vk.jpeg"),
+#     TextNode(" and a ", text_type_text),
+#     TextNode("link", text_type_link, "https://boot.dev"),
+# ]
