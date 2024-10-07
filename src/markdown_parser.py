@@ -63,7 +63,7 @@ def split_nodes_image(old_nodes):
                     else:
                         new_nodes.append(TextNode(split, TEXT_TYPE_TEXT))
 
-                    proc_image = not proc_image      
+                proc_image = not proc_image      
 
     return new_nodes
 
@@ -72,12 +72,12 @@ def split_nodes_link(old_nodes):
 
     for old_node in old_nodes:
         if(old_node.text):
-            splits = re.split("(" + MARKDOWN_IMAGE_OR_LINK + ")", old_node.text)
-            proc_image = bool(len(splits) > 0 and splits[0] and re.search(MARKDOWN_IMAGE_OR_LINK, splits[0]) != None)
+            splits = re.split("((?<!\!)" + MARKDOWN_IMAGE_OR_LINK + ")", old_node.text)
+            proc_image = bool(len(splits) > 0 and splits[0] and re.search("((?<!\!)" + MARKDOWN_IMAGE_OR_LINK + ")", splits[0]) != None)
 
             for split in splits:
                 if(split):
-                    if(re.search(MARKDOWN_IMAGE_OR_LINK, split) != None and proc_image):
+                    if(re.search("(?<!\!)" + MARKDOWN_IMAGE_OR_LINK, split) != None and proc_image):
                         new_nodes.append(image_or_link_to_textnode(split))
                     else:
                         new_nodes.append(TextNode(split, TEXT_TYPE_TEXT))
@@ -169,26 +169,32 @@ def extract_markdown_images(text):
     image_matches = re.findall("\!" + MARKDOWN_IMAGE_OR_LINK, text)
 
     for match in image_matches:
-        alt_text = match.substring(match.find("[") + 1, match.find("]"))
-        url_text = match.substring(match.find("(") + 1, match.find(")"))
-        image_tuples.append(tuple(alt_text, url_text))
+        alt_text = match[int(match.index("[")) + 1 : int(match.index("]"))]
+        url_text = match[int(match.index("(")) + 1 : int(match.index(")"))]
+        image_tuples.append(tuple([alt_text, url_text]))
 
     return image_tuples
 
 def extract_markdown_links(text):
     # Return a list of tuples (anchor text, url)
     link_tuples = []
-    link_matches = re.findall(MARKDOWN_IMAGE_OR_LINK, text)
 
-    for match in link_matches:
-        anchor_text = match.substring(match.find("[") + 1, match.find("]"))
-        url_text = match.substring(match.find("(") + 1, match.find(")"))
-        link_tuples.append(tuple(anchor_text, url_text))
+    if(re.search("!" + MARKDOWN_IMAGE_OR_LINK, text) == None):
+        link_matches = re.findall(MARKDOWN_IMAGE_OR_LINK, text)
+
+        for match in link_matches:
+            anchor_text = match[int(match.index("[")) + 1 : int(match.index("]"))]
+            url_text = match[int(match.index("(")) + 1 : int(match.index(")"))]
+            link_tuples.append(tuple([anchor_text, url_text]))
 
     return link_tuples
 
 def insert_items_at_idx(master_list, list_to_insert, insert_idx):
     master_copy = master_list.copy()
+
+    if(not bool(list_to_insert)):
+        return list_to_insert
+
     current_insert_idx = insert_idx
     
     for insert_item in list_to_insert:
@@ -198,37 +204,118 @@ def insert_items_at_idx(master_list, list_to_insert, insert_idx):
     return master_copy
 
 def text_to_textnodes(text):
+    first_inline_delim = list(get_delim_postitions(text).keys())
     input_node = [TextNode(text, TEXT_TYPE_TEXT)]
     new_nodes = []
-    
-    new_nodes = split_nodes_delimitter(input_node, MARKDOWN_BOLD, TEXT_TYPE_BOLD)
-    
-    for x in range(0, len(new_nodes)):
-        if(re.search("!" + MARKDOWN_IMAGE_OR_LINK, new_nodes[x].text) != -1):
-            popped_node = new_nodes.pop(x)
-            new_nodes = insert_items_at_idx(new_nodes, split_nodes_image([popped_node]), x)
-        elif(re.search(MARKDOWN_IMAGE_OR_LINK, new_nodes[x].text) != -1):
-            popped_node = new_nodes.pop(x)
-            new_nodes = insert_items_at_idx(new_nodes, split_nodes_link([popped_node]), x)
+
+    if(bool(first_inline_delim)):
+        new_nodes = split_nodes_delimitter(input_node, first_inline_delim[0], markdown_delim_to_text_type(first_inline_delim[0]))
+    else:
+        new_nodes = input_node
+
+    upper_bound = len(new_nodes)
+    node_idx = 0
+
+    while(node_idx < upper_bound):
+        if(re.search("!" + MARKDOWN_IMAGE_OR_LINK, new_nodes[node_idx].text) != None):
+            popped_node = new_nodes.pop(node_idx)
+            new_nodes = insert_items_at_idx(new_nodes, split_nodes_image([popped_node]), node_idx)
+            
+            if(node_idx > 0):
+                node_idx = node_idx - 1
+            
+            upper_bound = len(new_nodes)
+
+        if(re.search(MARKDOWN_IMAGE_OR_LINK, new_nodes[node_idx].text) != None):
+            popped_node = new_nodes.pop(node_idx)
+            new_nodes = insert_items_at_idx(new_nodes, split_nodes_link([popped_node]), node_idx)
+            
+            if(node_idx > 0):
+                node_idx = node_idx - 1
+            
+            upper_bound = len(new_nodes)
+        
+        node_idx += 1
 
     return new_nodes
 
+def markdown_to_blocks(markdown):
+    markdown_blocks = markdown.split("\n\n")
+    valid_blocks = []
 
-res = text_to_textnodes("This is **text** with an *italic* word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)")
+    for block in markdown_blocks:
+        block = block.strip()
+        
+        if(block):
+            valid_blocks.append(block)
+    
+    return valid_blocks
 
-print()
-print(res)
-print()
+def starts_with_heading(text):
+    for heading_type in MARKDOWN_HEADINGS:
+        if(text.startswith(heading_type)):
+            return True
+    
+    return False
 
-# [
-#     TextNode("This is ", text_type_text),
-#     TextNode("text", text_type_bold),
-#     TextNode(" with an ", text_type_text),
-#     TextNode("italic", text_type_italic),
-#     TextNode(" word and a ", text_type_text),
-#     TextNode("code block", text_type_code),
-#     TextNode(" and an ", text_type_text),
-#     TextNode("obi wan image", text_type_image, "https://i.imgur.com/fJRm4Vk.jpeg"),
-#     TextNode(" and a ", text_type_text),
-#     TextNode("link", text_type_link, "https://boot.dev"),
-# ]
+def is_quote_block(text):
+    if(text):
+        splits = text.split("\n")
+
+        for split in splits:
+            if(not split.startswith(MARKDOWN_BLOCKQUOTE)):
+                return False
+        
+        return True
+    
+    return False
+
+def is_unordered_list_block(text):
+    if(text):
+        splits = text.split("\n")
+
+        for split in splits:
+            if(not split.startswith(MARKDOWN_UL_PREFIX_1) and not split.startswith(MARKDOWN_UL_PREFIX_2)):
+                return False
+        
+        return True
+    
+    return False
+
+def is_ordered_list_block(text):
+    if(text):
+        splits = text.split("\n")
+        expected_num = 1
+
+        for split in splits:
+            if("." in split and re.search(MARKDOWN_OL_PREFIX, text) != None):
+                inner_splits = split.split(".")
+
+                if(inner_splits[0] and inner_splits[0] == str(expected_num)):
+                    expected_num += 1
+                    
+                else: 
+                    return False
+            else:
+                return False
+            
+        
+        return True
+    
+    return False
+
+def block_to_block_type(markdown_block):
+    if(starts_with_heading(markdown_block)):
+        return BLOCK_TYPE_HEADING
+    elif(markdown_block.startswith(BLOCK_CODE) and markdown_block.endswith(BLOCK_CODE)):
+        return BLOCK_TYPE_CODE
+    elif(is_quote_block(markdown_block)):
+        return BLOCK_TYPE_QUOTE
+    elif(is_unordered_list_block(markdown_block)):
+        return BLOCK_TYPE_UL
+    elif(is_ordered_list_block(markdown_block)):
+        return BLOCK_TYPE_OL
+    else:
+        return BLOCK_TYPE_PARAGRAPH
+
+    
