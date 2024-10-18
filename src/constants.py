@@ -1,9 +1,17 @@
+from os import getcwd
+
 TEXT_TYPE_TEXT : str = "text"
 TEXT_TYPE_BOLD : str = "bold"
 TEXT_TYPE_ITALIC : str = "italic"
 TEXT_TYPE_CODE : str = "code"
 TEXT_TYPE_LINK : str = "link"
 TEXT_TYPE_IMAGE : str = "image"
+TEXT_TYPE_H1 : str = "h1"
+TEXT_TYPE_H2 : str = "h2"
+TEXT_TYPE_H3 : str = "h3"
+TEXT_TYPE_H4 : str = "h4"
+TEXT_TYPE_H5 : str = "h5"
+TEXT_TYPE_H6 : str = "h6"
 
 BLOCK_TYPE_PARAGRAPH = "paragraph"
 BLOCK_TYPE_HEADING = "heading"
@@ -56,3 +64,4 @@ MARKDOWN_DELIMS = {
         "code" : MARKDOWN_CODE 
 }
 
+MARKDOWN_SAMPLE_DIR = getcwd() + "/src/markdown_sample_files/"

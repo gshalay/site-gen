@@ -1,15 +1,19 @@
+from os import getcwd
 from textnode import *
 from constants import *
 from markdown_parser import *
 
 def main():
-    node = TextNode("This is a text node with a `code block` word", TEXT_TYPE_TEXT)
-    node2 = TextNode("**There once was a man from Peru *He slipped and fell one day and lost his shoe* `which made him quite blue`, now a man with one shoe**", TEXT_TYPE_BOLD)
-    node3 = TextNode("There once was a man from Tahiti > He climbed a cliff and watched the sunset. *Then came night `then midnight` then dawn `then morning once more`* C'est Fini.", MARKDOWN_BLOCKQUOTE)
+    # Get file contents.
+    print(getcwd())
+    sample1_text = "".join(open(MARKDOWN_SAMPLE_DIR + "sample1.md").readlines())
+    sample2_text = "".join(open(MARKDOWN_SAMPLE_DIR + "sample2.md").readlines())
 
-    # print(f"split nodes - {split_nodes_by_delimitter([node])}")
-    # print(f"split nodes - {split_nodes_by_delimitter([node2])}")
-    # print(f"split nodes - {split_nodes_by_delimitter([node3])}")
+    # Drive the main parse method.
+    sample1_html = markdown_to_html_node(sample1_text)
+    sample2_html = markdown_to_html_node(sample2_text)
+
+    print("Finished Processing.")
 
 if(__name__ == "__main__"):
     main()

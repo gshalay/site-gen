@@ -6,7 +6,7 @@ import collections as ct
 import more_itertools as mit
 import re
 
-def text_node_to_html_node(text_node):
+def text_node_to_leaf_node(text_node):
         html_node = None
 
         match(str(text_node.text_type)):
@@ -34,6 +34,18 @@ def markdown_delim_to_text_type(delim : str):
         return TEXT_TYPE_BOLD
     elif(delim == MARKDOWN_ITALIC or delim == MARKDOWN_ITALIC2):
         return TEXT_TYPE_ITALIC
+    elif(delim == MARKDOWN_H1):
+        return TEXT_TYPE_H1
+    elif(delim == MARKDOWN_H2):
+        return TEXT_TYPE_H2
+    elif(delim == MARKDOWN_H3):
+        return TEXT_TYPE_H3
+    elif(delim == MARKDOWN_H4):
+        return TEXT_TYPE_H4
+    elif(delim == MARKDOWN_H5):
+        return TEXT_TYPE_H5
+    elif(delim == MARKDOWN_H6):
+        return TEXT_TYPE_H6
     elif(delim == TEXT_TYPE_TEXT):
         return TEXT_TYPE_TEXT
     else:
@@ -151,12 +163,13 @@ def split_nodes_delimitter(old_nodes, delimitter, text_type):
 
                     for delim, idxs in delim_poses.items():
                         for pos_pair in idxs:
-                            delim_offset = 2 if(delim == MARKDOWN_BOLD) else 1
-                            if(last_upper != -1):
-                                new_nodes.append(TextNode(old_node.text[last_upper:pos_pair[0]], TEXT_TYPE_TEXT))
+                            if(len(pos_pair) > 1):
+                                delim_offset = 2 if(delim == MARKDOWN_BOLD) else 1
+                                if(last_upper != -1):
+                                    new_nodes.append(TextNode(old_node.text[last_upper:pos_pair[0]], TEXT_TYPE_TEXT))
 
-                            new_nodes.append(TextNode(old_node.text[(pos_pair[0] + delim_offset):pos_pair[1]], markdown_delim_to_text_type(delim)))                            
-                            last_upper = pos_pair[1] + delim_offset
+                                new_nodes.append(TextNode(old_node.text[(pos_pair[0] + delim_offset):pos_pair[1]], markdown_delim_to_text_type(delim)))                            
+                                last_upper = pos_pair[1] + delim_offset
                     
                     if(last_upper < len(old_node.text)):
                         new_nodes.append(TextNode(old_node.text[last_upper:], TEXT_TYPE_TEXT))
@@ -208,8 +221,13 @@ def text_to_textnodes(text):
     input_node = [TextNode(text, TEXT_TYPE_TEXT)]
     new_nodes = []
 
-    if(bool(first_inline_delim)):
-        new_nodes = split_nodes_delimitter(input_node, first_inline_delim[0], markdown_delim_to_text_type(first_inline_delim[0]))
+    if(len(first_inline_delim) > 0 ):
+        text_type = markdown_delim_to_text_type(first_inline_delim[0])
+
+        if(first_inline_delim[0] in MARKDOWN_HEADINGS):
+            new_nodes = [TextNode(text[len(first_inline_delim[0]):], text_type)]
+        else:
+            new_nodes = split_nodes_delimitter(input_node, first_inline_delim[0], text_type)
     else:
         new_nodes = input_node
 
@@ -299,7 +317,6 @@ def is_ordered_list_block(text):
             else:
                 return False
             
-        
         return True
     
     return False
@@ -318,4 +335,52 @@ def block_to_block_type(markdown_block):
     else:
         return BLOCK_TYPE_PARAGRAPH
 
+def paragraph_block_to_html_node(block):
+        raise NotImplementedError
+
+def code_block_to_html_node(block):
+        raise NotImplementedError
     
+def quote_block_to_html_node(block):
+        raise NotImplementedError
+
+def ordered_list_block_to_html_node(block):
+        raise NotImplementedError
+
+def unordered_list_block_to_html_node(block):
+        raise NotImplementedError
+
+def heading_block_to_html_node(block):
+    heading_prefix = block.split(" ")[0] + " "
+    heading_type = None
+
+    for key, value in MARKDOWN_DELIMS.items():
+        if(value == heading_prefix):
+            heading_type = key
+            heading_value = block[heading_prefix + 1:]
+            
+            
+
+            return LeafNode(heading_type, heading_value)
+    
+    return None
+    
+    # find inline nodes until none exist. Parents should be ParentNodes, child nodes with no children should be LeafNodes.
+
+def markdown_to_html_node(markdown_text):
+    blocks = markdown_to_blocks(markdown_text)
+    parent_html_node = None
+
+    text_nodes = []
+
+    for block in blocks:
+        block_type = block_to_block_type(block)
+        
+        # Text to TextNodes
+        text_nodes.append(text_to_textnodes(block))
+
+
+    print("Hang on there partner.")
+
+
+        # TextNodes to HtmlNodes

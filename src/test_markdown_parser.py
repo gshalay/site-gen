@@ -3,7 +3,7 @@ import unittest
 from leafnode import LeafNode
 from textnode import TextNode
 from constants import *
-from markdown_parser import text_node_to_html_node
+from markdown_parser import text_node_to_leaf_node
 from markdown_parser import split_nodes_delimitter
 from markdown_parser import get_delim_postitions
 from markdown_parser import extract_markdown_images
@@ -26,12 +26,12 @@ class TestMarkdownParser(unittest.TestCase):
             text_node6 = TextNode("Some image", "image", "c:/Test/intro.png")
             text_node7 = TextNode("This isn't right...", "uhoh")
 
-            actual1 = text_node_to_html_node(text_node1)
-            actual2 = text_node_to_html_node(text_node2)
-            actual3 = text_node_to_html_node(text_node3)
-            actual4 = text_node_to_html_node(text_node4)
-            actual5 = text_node_to_html_node(text_node5)
-            actual6 = text_node_to_html_node(text_node6)
+            actual1 = text_node_to_leaf_node(text_node1)
+            actual2 = text_node_to_leaf_node(text_node2)
+            actual3 = text_node_to_leaf_node(text_node3)
+            actual4 = text_node_to_leaf_node(text_node4)
+            actual5 = text_node_to_leaf_node(text_node5)
+            actual6 = text_node_to_leaf_node(text_node6)
 
             expected1 = LeafNode(None, "nothing to see here...")
             expected2 = LeafNode("b", "I'm Bold!")
@@ -46,7 +46,7 @@ class TestMarkdownParser(unittest.TestCase):
             self.assertEqual(actual4, expected4)
             self.assertEqual(actual5, expected5)
             self.assertEqual(actual6, expected6)
-            self.assertRaises(Exception, text_node_to_html_node, text_node7)
+            self.assertRaises(Exception, text_node_to_leaf_node, text_node7)
 
 
      def test_get_delim_postitions(self):
