@@ -15,7 +15,7 @@ TEXT_TYPE_H6 : str = "h6"
 
 BLOCK_TYPE_PARAGRAPH = "paragraph"
 BLOCK_TYPE_HEADING = "heading"
-BLOCK_TYPE_CODE = "code"
+BLOCK_TYPE_CODE = "code_block"
 BLOCK_TYPE_QUOTE = "quote"
 BLOCK_TYPE_UL = "unordered_list"
 BLOCK_TYPE_OL = "ordered_list"
@@ -37,7 +37,7 @@ MARKDOWN_UL_PREFIX_2 = "- "
 
 MARKDOWN_OL_PREFIX = "^\d+\.\s+.*"
 
-BLOCK_CODE = "```"
+MARKDOWN_BLOCK_CODE = "```"
 
 MARKDOWN_IMAGE_OR_LINK = "\[.*?\]\(.*?\)"
 
@@ -49,6 +49,20 @@ MARKDOWN_HEADINGS = [
         MARKDOWN_H2,
         MARKDOWN_H1
 ]
+
+BLOCK_TYPE_DELIMS = { 
+        "heading6" : MARKDOWN_H6,
+        "heading5" : MARKDOWN_H5, 
+        "heading4" : MARKDOWN_H4,
+        "heading3" : MARKDOWN_H3,
+        "heading2" : MARKDOWN_H2,
+        "heading1" : MARKDOWN_H1,
+        "ul_1" : MARKDOWN_UL_PREFIX_1,
+        "ul_2" : MARKDOWN_UL_PREFIX_2, 
+        "ol" : MARKDOWN_OL_PREFIX,
+        "blockquote" : MARKDOWN_BLOCKQUOTE,
+        "block_code" : MARKDOWN_BLOCK_CODE 
+}
 
 MARKDOWN_DELIMS = { 
         "h6" : MARKDOWN_H6,

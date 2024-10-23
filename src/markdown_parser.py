@@ -64,7 +64,7 @@ def split_nodes_image(old_nodes):
     new_nodes = []
 
     for old_node in old_nodes:
-        if(old_node.text):
+        if(old_node.text and old_node.text_type == TEXT_TYPE_TEXT):
             splits = re.split("(" + ("\!" + MARKDOWN_IMAGE_OR_LINK) + ")", old_node.text)
             proc_image = bool((len(splits) > 0 and splits[0] and re.search("\!" + MARKDOWN_IMAGE_OR_LINK, splits[0]) != None))
 
@@ -76,6 +76,8 @@ def split_nodes_image(old_nodes):
                         new_nodes.append(TextNode(split, TEXT_TYPE_TEXT))
 
                 proc_image = not proc_image      
+        else:
+            new_nodes.append(old_node)
 
     return new_nodes
 
@@ -83,7 +85,7 @@ def split_nodes_link(old_nodes):
     new_nodes = []
 
     for old_node in old_nodes:
-        if(old_node.text):
+        if(old_node.text and old_node.text_type == TEXT_TYPE_TEXT):
             splits = re.split("((?<!\!)" + MARKDOWN_IMAGE_OR_LINK + ")", old_node.text)
             proc_image = bool(len(splits) > 0 and splits[0] and re.search("((?<!\!)" + MARKDOWN_IMAGE_OR_LINK + ")", splits[0]) != None)
 
@@ -94,7 +96,9 @@ def split_nodes_link(old_nodes):
                     else:
                         new_nodes.append(TextNode(split, TEXT_TYPE_TEXT))
 
-                proc_image = not proc_image        
+                proc_image = not proc_image  
+        else:
+            new_nodes.append(old_node)      
 
     return new_nodes
 
@@ -216,44 +220,82 @@ def insert_items_at_idx(master_list, list_to_insert, insert_idx):
     
     return master_copy
 
-def text_to_textnodes(text):
-    first_inline_delim = list(get_delim_postitions(text).keys())
-    input_node = [TextNode(text, TEXT_TYPE_TEXT)]
-    new_nodes = []
-
-    if(len(first_inline_delim) > 0 ):
-        text_type = markdown_delim_to_text_type(first_inline_delim[0])
-
-        if(first_inline_delim[0] in MARKDOWN_HEADINGS):
-            new_nodes = [TextNode(text[len(first_inline_delim[0]):], text_type)]
-        else:
-            new_nodes = split_nodes_delimitter(input_node, first_inline_delim[0], text_type)
+def trim_block_delims(block, block_type):
+    block_content = ""
+    
+    if(block_type == BLOCK_TYPE_CODE):
+        block_content = block[len(MARKDOWN_BLOCK_CODE):len(block) - len(MARKDOWN_BLOCK_CODE)]
+    elif(block_type == BLOCK_TYPE_PARAGRAPH):
+        block_content = block
     else:
-        new_nodes = input_node
+        for line in block.split("\n"):
+            if(bool(line)):
+                substr_idx = line.index(" ") + 1
+                line_text = line[substr_idx:]
+                if(bool(line_text)):
+                    block_content += line_text + "\n"
+            
+    return block_content
 
-    upper_bound = len(new_nodes)
-    node_idx = 0
+def get_first_inline_delim(text):
+    line_delims = dict(sorted(get_delim_postitions(text).items(), key=lambda item: item[1][0]))
 
-    while(node_idx < upper_bound):
-        if(re.search("!" + MARKDOWN_IMAGE_OR_LINK, new_nodes[node_idx].text) != None):
-            popped_node = new_nodes.pop(node_idx)
-            new_nodes = insert_items_at_idx(new_nodes, split_nodes_image([popped_node]), node_idx)
-            
-            if(node_idx > 0):
-                node_idx = node_idx - 1
-            
-            upper_bound = len(new_nodes)
+    if(len(line_delims) > 0):
+        # The delim will be the first key in the resulting dictionary.
+        return list(line_delims.keys())[0]
+    else:
+        return None
 
-        if(re.search(MARKDOWN_IMAGE_OR_LINK, new_nodes[node_idx].text) != None):
-            popped_node = new_nodes.pop(node_idx)
-            new_nodes = insert_items_at_idx(new_nodes, split_nodes_link([popped_node]), node_idx)
+def only_unique_items(master, to_add):
+    unique_items = []
+    seen = []
+
+    for item in master + to_add:
+        if item not in seen:
+            seen.append(item)
+            unique_items.append(item)
+    
+    return unique_items
+
+def block_to_textnodes(block, block_type):
+    trimmed_block = trim_block_delims(block, block_type)
+    block_lines = trimmed_block.split("\n")
+    new_nodes = []
+    block_nodes = []
+
+    image_regex = re.compile("(" + "\!" + MARKDOWN_IMAGE_OR_LINK + ")", re.IGNORECASE)
+    link_regex = re.compile("(" + MARKDOWN_IMAGE_OR_LINK + ")", re.IGNORECASE)
+
+    for line in block_lines:
+        # if the line is not empty, process the block text. (empty string cast to bool are False)
+        if(bool(line)):
+            if(len(image_regex.findall(line)) > 0 or len(link_regex.findall(line)) > 0):
+                # First separate images and links.
+                block_nodes = split_nodes_image(split_nodes_link([TextNode(line, TEXT_TYPE_TEXT)]))                
+
+                # Keep track of array bounds and handle inline node splitting.
+                node_idx = 0
+
+                if(len(block_nodes) > 0):
+                    while(node_idx < len(block_nodes)):
+                        if(block_nodes[node_idx].text_type != TEXT_TYPE_IMAGE and block_nodes[node_idx].text_type != TEXT_TYPE_LINK):
+                            first_delim = get_first_inline_delim(block_nodes[node_idx].text)
+                            if(first_delim != None):
+                                popped_node = block_nodes.pop(node_idx)
+                                line_nodes = split_nodes_delimitter([popped_node], first_delim, TEXT_TYPE_TEXT)
+                                block_nodes = insert_items_at_idx(block_nodes, line_nodes, node_idx)
+                        else:
+                            block_nodes.append(TextNode(block_nodes[node_idx].text, TEXT_TYPE_TEXT))
+
+                        node_idx += 1
+
+            elif(get_first_inline_delim(line) != None):
+                block_nodes.extend(split_nodes_delimitter([TextNode(line, TEXT_TYPE_TEXT)], get_first_inline_delim(line), TEXT_TYPE_TEXT))
+            else:
+                block_nodes.extend([TextNode(line, TEXT_TYPE_TEXT)])
             
-            if(node_idx > 0):
-                node_idx = node_idx - 1
-            
-            upper_bound = len(new_nodes)
-        
-        node_idx += 1
+            if(bool(block_nodes)):
+                new_nodes = only_unique_items(new_nodes, block_nodes)
 
     return new_nodes
 
@@ -275,6 +317,13 @@ def starts_with_heading(text):
             return True
     
     return False
+
+def get_heading_type(text):
+    for heading_type in MARKDOWN_HEADINGS:
+        if(text.startswith(heading_type)):
+            return BLOCK_TYPE_HEADING + str(len(heading_type) - 1)
+    
+    return None
 
 def is_quote_block(text):
     if(text):
@@ -323,8 +372,8 @@ def is_ordered_list_block(text):
 
 def block_to_block_type(markdown_block):
     if(starts_with_heading(markdown_block)):
-        return BLOCK_TYPE_HEADING
-    elif(markdown_block.startswith(BLOCK_CODE) and markdown_block.endswith(BLOCK_CODE)):
+        return get_heading_type(markdown_block)
+    elif(markdown_block.startswith(MARKDOWN_BLOCK_CODE) and markdown_block.endswith(MARKDOWN_BLOCK_CODE)):
         return BLOCK_TYPE_CODE
     elif(is_quote_block(markdown_block)):
         return BLOCK_TYPE_QUOTE
@@ -369,18 +418,20 @@ def heading_block_to_html_node(block):
 
 def markdown_to_html_node(markdown_text):
     blocks = markdown_to_blocks(markdown_text)
-    parent_html_node = None
+    block_text_nodes = []
+    html_children = []
 
-    text_nodes = []
-
+    # Blocks to TextNode tuples where tuple = (block_type, block_textnode_children).
     for block in blocks:
         block_type = block_to_block_type(block)
+        block_text_nodes.append((block_type, block_to_textnodes(block, block_type)))
+
+    print("Hang on there pardner.")
+    # for tuple in block_text_nodes:
         
-        # Text to TextNodes
-        text_nodes.append(text_to_textnodes(block))
 
 
-    print("Hang on there partner.")
+
 
 
         # TextNodes to HtmlNodes
