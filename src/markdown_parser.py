@@ -318,13 +318,7 @@ def block_to_textnodes(block, block_type):
                 for node in block_nodes:
                     if node.text_type != TEXT_TYPE_IMAGE and node.text_type != TEXT_TYPE_LINK:
                         inner_nodes = []
-
-                        node_text = node.text
-
-                        if(block_type == BLOCK_TYPE_OL):
-                            node_text = node.text.lsplit(".", 1)[1].strip()
-
-                        node_delim = get_first_inline_delim(node_text)
+                        node_delim = get_first_inline_delim(node.text)
 
                         if node_delim != None:
                             inner_nodes = split_nodes_delimitter(block_nodes, node_delim, TEXT_TYPE_TEXT)
