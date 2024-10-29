@@ -1,6 +1,7 @@
 from constants import *
 from leafnode import LeafNode
 from textnode import TextNode
+from parentnode import ParentNode
 import itertools as it
 import collections as ct
 import more_itertools as mit
@@ -22,6 +23,8 @@ def text_node_to_leaf_node(text_node):
                 html_node = LeafNode("a", text_node.text, { "href" : text_node.url})
             case "image":
                 html_node = LeafNode("img", text_node.text, {"src" : text_node.url, "alt" : ""})
+            case "list_item":
+                html_node = LeafNode("li", text_node.text)
             case _:
                 raise Exception(f"Tag '{text_node.text_type}' is unknown.")
             
@@ -220,21 +223,50 @@ def insert_items_at_idx(master_list, list_to_insert, insert_idx):
     
     return master_copy
 
+def starts_with_block_delim(block):
+    if(block):
+        for block_delim in BLOCK_TYPE_DELIMS.values():
+            if(block.startswith(block_delim)):
+                return True
+    
+    return False
+
+def trim_numbered_prefixes(content):
+    lines = content.split("\n")
+    trimmed_lines = []
+
+    for item in lines:
+        trimmed_lines.append(item.rsplit(".", 1)[1].strip())
+
+    return "\n".join(trimmed_lines)
+
 def trim_block_delims(block, block_type):
     block_content = ""
+    block_copy = block
     
-    if(block_type == BLOCK_TYPE_CODE):
-        block_content = block[len(MARKDOWN_BLOCK_CODE):len(block) - len(MARKDOWN_BLOCK_CODE)]
-    elif(block_type == BLOCK_TYPE_PARAGRAPH):
-        block_content = block
+    if(block_type == BLOCK_TYPE_OL):
+        block_content = trim_numbered_prefixes(block)
+
+    elif(starts_with_block_delim(block)):
+        if(block_type == BLOCK_TYPE_CODE):
+            if(block_copy.startswith(MARKDOWN_BLOCK_CODE)):
+                block_copy = block_copy[len(MARKDOWN_BLOCK_CODE):]
+            if(block_copy.endswith(MARKDOWN_BLOCK_CODE)):
+                block_copy = block_copy[:len(block_copy) - len(MARKDOWN_BLOCK_CODE)]
+
+            block_content = block_copy
+        elif(block_type == BLOCK_TYPE_PARAGRAPH):
+            block_content = block_copy
+        else:
+            for line in block_copy.split("\n"):
+                if(bool(line)):
+                    substr_idx = line.index(" ") + 1
+                    line_text = line[substr_idx:]
+                    if(bool(line_text)):
+                        block_content += line_text + "\n"
     else:
-        for line in block.split("\n"):
-            if(bool(line)):
-                substr_idx = line.index(" ") + 1
-                line_text = line[substr_idx:]
-                if(bool(line_text)):
-                    block_content += line_text + "\n"
-            
+        return block
+    
     return block_content
 
 def get_first_inline_delim(text):
@@ -257,45 +289,50 @@ def only_unique_items(master, to_add):
     
     return unique_items
 
+def extract_title(markdown_text):
+    blocks = markdown_to_blocks(markdown_text)
+
+    for block_text in blocks:
+        if(block_text.startswith(MARKDOWN_H1)):
+            return block_text[2:].strip()
+
+    raise Exception("Error: Markdown doesn't contain an h1 heading.")
+
+
 def block_to_textnodes(block, block_type):
     trimmed_block = trim_block_delims(block, block_type)
     block_lines = trimmed_block.split("\n")
     new_nodes = []
     block_nodes = []
 
-    image_regex = re.compile("(" + "\!" + MARKDOWN_IMAGE_OR_LINK + ")", re.IGNORECASE)
-    link_regex = re.compile("(" + MARKDOWN_IMAGE_OR_LINK + ")", re.IGNORECASE)
-
     for line in block_lines:
         # if the line is not empty, process the block text. (empty string cast to bool are False)
         if(bool(line)):
-            if(len(image_regex.findall(line)) > 0 or len(link_regex.findall(line)) > 0):
-                # First separate images and links.
-                block_nodes = split_nodes_image(split_nodes_link([TextNode(line, TEXT_TYPE_TEXT)]))                
+            block_nodes = [TextNode(line, TEXT_TYPE_TEXT)]
 
-                # Keep track of array bounds and handle inline node splitting.
-                node_idx = 0
+            block_nodes = split_nodes_image(block_nodes)
+            block_nodes = split_nodes_link(block_nodes)
 
-                if(len(block_nodes) > 0):
-                    while(node_idx < len(block_nodes)):
-                        if(block_nodes[node_idx].text_type != TEXT_TYPE_IMAGE and block_nodes[node_idx].text_type != TEXT_TYPE_LINK):
-                            first_delim = get_first_inline_delim(block_nodes[node_idx].text)
-                            if(first_delim != None):
-                                popped_node = block_nodes.pop(node_idx)
-                                line_nodes = split_nodes_delimitter([popped_node], first_delim, TEXT_TYPE_TEXT)
-                                block_nodes = insert_items_at_idx(block_nodes, line_nodes, node_idx)
-                        else:
-                            block_nodes.append(TextNode(block_nodes[node_idx].text, TEXT_TYPE_TEXT))
+            first_delim = get_first_inline_delim(line)
+            if(first_delim != None):
+                for node in block_nodes:
+                    if node.text_type != TEXT_TYPE_IMAGE and node.text_type != TEXT_TYPE_LINK:
+                        inner_nodes = []
 
-                        node_idx += 1
+                        node_text = node.text
 
-            elif(get_first_inline_delim(line) != None):
-                block_nodes.extend(split_nodes_delimitter([TextNode(line, TEXT_TYPE_TEXT)], get_first_inline_delim(line), TEXT_TYPE_TEXT))
-            else:
-                block_nodes.extend([TextNode(line, TEXT_TYPE_TEXT)])
-            
-            if(bool(block_nodes)):
-                new_nodes = only_unique_items(new_nodes, block_nodes)
+                        if(block_type == BLOCK_TYPE_OL):
+                            node_text = node.text.lsplit(".", 1)[1].strip()
+
+                        node_delim = get_first_inline_delim(node_text)
+
+                        if node_delim != None:
+                            inner_nodes = split_nodes_delimitter(block_nodes, node_delim, TEXT_TYPE_TEXT)
+                            idx = block_nodes.index(node)
+                            block_nodes[idx : idx + 1] = inner_nodes
+        
+        if(bool(block_nodes)):
+            new_nodes = only_unique_items(new_nodes, block_nodes)
 
     return new_nodes
 
@@ -384,54 +421,32 @@ def block_to_block_type(markdown_block):
     else:
         return BLOCK_TYPE_PARAGRAPH
 
-def paragraph_block_to_html_node(block):
-        raise NotImplementedError
+def textnodes_to_html(parent_type, children):
+    html_children = []
 
-def code_block_to_html_node(block):
-        raise NotImplementedError
+    for child in children:
+        if((parent_type == "ordered_list" or parent_type == "unordered_list") and child.text_type == TEXT_TYPE_TEXT):
+            child.text_type = "list_item"
+
+        html_children.append(text_node_to_leaf_node(child))
     
-def quote_block_to_html_node(block):
-        raise NotImplementedError
+    return ParentNode(HTML_TAG_TYPES[parent_type], html_children)
 
-def ordered_list_block_to_html_node(block):
-        raise NotImplementedError
-
-def unordered_list_block_to_html_node(block):
-        raise NotImplementedError
-
-def heading_block_to_html_node(block):
-    heading_prefix = block.split(" ")[0] + " "
-    heading_type = None
-
-    for key, value in MARKDOWN_DELIMS.items():
-        if(value == heading_prefix):
-            heading_type = key
-            heading_value = block[heading_prefix + 1:]
-            
-            
-
-            return LeafNode(heading_type, heading_value)
-    
-    return None
-    
-    # find inline nodes until none exist. Parents should be ParentNodes, child nodes with no children should be LeafNodes.
 
 def markdown_to_html_node(markdown_text):
     blocks = markdown_to_blocks(markdown_text)
     block_text_nodes = []
     html_children = []
 
-    # Blocks to TextNode tuples where tuple = (block_type, block_textnode_children).
+    # Blocks to TextNode tuples where tuple = (block_type, block_children).
     for block in blocks:
         block_type = block_to_block_type(block)
         block_text_nodes.append((block_type, block_to_textnodes(block, block_type)))
 
-    print("Hang on there pardner.")
-    # for tuple in block_text_nodes:
-        
+    # TextNodes to HtmlNodes
+    for tuple in block_text_nodes:
+        block_type = tuple[0]
+        block_children = tuple[1]
+        html_children.append(textnodes_to_html(block_type, block_children))
 
-
-
-
-
-        # TextNodes to HtmlNodes
+    return ParentNode(HTML_TAG_TYPES["division"], html_children)

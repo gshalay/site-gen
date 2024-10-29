@@ -16,7 +16,7 @@ TEXT_TYPE_H6 : str = "h6"
 BLOCK_TYPE_PARAGRAPH = "paragraph"
 BLOCK_TYPE_HEADING = "heading"
 BLOCK_TYPE_CODE = "code_block"
-BLOCK_TYPE_QUOTE = "quote"
+BLOCK_TYPE_QUOTE = "blockquote"
 BLOCK_TYPE_UL = "unordered_list"
 BLOCK_TYPE_OL = "ordered_list"
 
@@ -76,6 +76,26 @@ MARKDOWN_DELIMS = {
         "italic2" : MARKDOWN_ITALIC2,
         "blockquote" : MARKDOWN_BLOCKQUOTE,
         "code" : MARKDOWN_CODE 
+}
+
+HTML_TAG_TYPES = {
+    "ordered_list" : "ol",
+    "unordered_list" : "ul",
+    "heading1" : "h1",
+    "heading2" : "h2",
+    "heading3" : "h3",
+    "heading4" : "h4",
+    "heading5" : "h5",
+    "heading6" : "h6",
+    "code_block" : "code",
+    "bold" : "b",
+    "italic" : "i",
+    "image" : "img",
+    "link" : "a", 
+    "division" : "div", 
+    "paragraph" : "p",
+    "list_item" : "li",
+    "blockquote" : "blockquote"
 }
 
 MARKDOWN_SAMPLE_DIR = getcwd() + "/src/markdown_sample_files/"

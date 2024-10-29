@@ -10,9 +10,11 @@ from markdown_parser import extract_markdown_images
 from markdown_parser import extract_markdown_links
 from markdown_parser import split_nodes_image
 from markdown_parser import split_nodes_link
-from markdown_parser import text_to_textnodes
+from markdown_parser import block_to_textnodes
 from markdown_parser import markdown_to_blocks
 from markdown_parser import block_to_block_type
+from markdown_parser import markdown_to_html_node
+from markdown_parser import extract_title
 
 class TestMarkdownParser(unittest.TestCase):
      def test_text_node_to_html_node(self):
@@ -376,10 +378,10 @@ class TestMarkdownParser(unittest.TestCase):
           self.assertEqual(split_nodes_image(image_nodes6), expected6)
           self.assertEqual(split_nodes_image(image_nodes7), expected7)
 
-     def test_text_to_textnodes(self):
-          actual1 = text_to_textnodes("This is **text** with an *italic* word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)")
-          actual2 = text_to_textnodes("This is and a [link](https://boot.dev)![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg)")
-          actual3 = text_to_textnodes("and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and This is **text** with an *italic* word and a `code block` a [link](https://boot.dev)")
+     def test_block_to_textnodes(self):
+          actual1 = block_to_textnodes("This is **text** with an *italic* word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)", "paragraph")
+          actual2 = block_to_textnodes("This is and a [link](https://boot.dev)![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg)", "ordered_list")
+          actual3 = block_to_textnodes("and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and This is **text** with an *italic* word and a `code block` a [link](https://boot.dev)", "code")
 
           expected1 = [
                TextNode("This is ", TEXT_TYPE_TEXT),
@@ -410,8 +412,7 @@ class TestMarkdownParser(unittest.TestCase):
                TextNode(" word and a ", TEXT_TYPE_TEXT),
                TextNode("code block", TEXT_TYPE_CODE),
                TextNode(" a ", TEXT_TYPE_TEXT),
-               TextNode("link", TEXT_TYPE_LINK, "https://boot.dev"),
-               
+               TextNode("link", TEXT_TYPE_LINK, "https://boot.dev")               
           ]
 
           self.assertEqual(actual1, expected1)
@@ -472,12 +473,12 @@ class TestMarkdownParser(unittest.TestCase):
           actual19 = block_to_block_type("uhhhhhh... paragraph maybe???")
           actual20 = block_to_block_type("multiline paragraph\nmultiline paragraph\nmultiline paragraph\nmultiline paragraph\nmultiline paragraph\nmultiline paragraph")
           
-          expected1 = BLOCK_TYPE_HEADING
-          expected2 = BLOCK_TYPE_HEADING
-          expected3 = BLOCK_TYPE_HEADING
-          expected4 = BLOCK_TYPE_HEADING
-          expected5 = BLOCK_TYPE_HEADING
-          expected6 = BLOCK_TYPE_HEADING
+          expected1 = BLOCK_TYPE_HEADING + "1"
+          expected2 = BLOCK_TYPE_HEADING + "2"
+          expected3 = BLOCK_TYPE_HEADING + "3"
+          expected4 = BLOCK_TYPE_HEADING + "4"
+          expected5 = BLOCK_TYPE_HEADING + "5"
+          expected6 = BLOCK_TYPE_HEADING + "6"
           expected7 = BLOCK_TYPE_UL
           expected8 = BLOCK_TYPE_UL
           expected9 = BLOCK_TYPE_UL
@@ -513,6 +514,35 @@ class TestMarkdownParser(unittest.TestCase):
           self.assertEqual(actual18, expected18)
           self.assertEqual(actual19, expected19)
           self.assertEqual(actual20, expected20)
+
+def test_markdown_to_html_node(self):
+     text1 = "".join(open(MARKDOWN_SAMPLE_DIR + "paired_down.md").readlines())
+     text2 = "".join(open(MARKDOWN_SAMPLE_DIR + "sample1.md").readlines())
+     text3 = "".join(open(MARKDOWN_SAMPLE_DIR + "sample2.md").readlines())
+
+     actual1 = markdown_to_html_node(text1)
+     actual2 = markdown_to_html_node(text2)
+     actual3 = markdown_to_html_node(text3)
+
+     expected1 = "<div><p>This is a paragraph text block with some <b>bold</b> and <i>italic</i> text. There are also other things too such as embedded images: <img src=\"https://static.wikia.nocookie.net/pokemon/images/e/eb/Paul_Electivire.png/revision/latest?cb=20220610201736\" alt=\"Paul's Electivire\"> and links: <link href=\"www.google.com\">This is some alt text for the link</link></p></div>"
+     expected2 = "<div><h1>This is an h1 header</h1><h2>This is an h2 header</h2><h3>This is an h3 header</h3><h4>This is an h4 header</h4><h5>This is an h5 header</h5><h6>This is an h6 header</h6><code>This is a block of code.\nif elif else and all that.</code><p>This is a paragraph text block with some <b>bold</b> and <i>italic</i> text. There are also other things too such as embedded images: <img src=\"https://static.wikia.nocookie.net/pokemon/images/e/eb/Paul_Electivire.png/revision/latest?cb=20220610201736\" alt=\"Paul's Electivire\"> and links: <link href=\"www.google.com\">This is some alt text for the link</link></p></div>"
+     expected3 = "<div><ol><li>This is item 1</li><li>This is item 2</li><li>This is item 3</li><li>This is item 4</li><li>This is item 5</li></ol><ul><li>another list</li><li>but unordered</li><li>and undashed</li><li>random</li><li>end</li></ul><ul><li>yet another</li><li>list of items</li><li>this is one with only dashes</li><li>and no asterisks</li><li>yet another end</li></ul><ul><li>one last list</li><li>with a mix of dashes and asterisks</li><li>since markdown supports it</li><li>and it looks kinda neat.</li><li>fin.</li></ul></div>"
+
+     self.assertEqual(actual1, expected1)
+     self.assertEqual(actual2, expected2)
+     self.assertEqual(actual3, expected3)
+
+
+def test_extract_title(self):
+     text1 = "".join(open(MARKDOWN_SAMPLE_DIR + "sample1.md").readlines())
+     text2 = "".join(open(MARKDOWN_SAMPLE_DIR + "paired_down.md").readlines())
+
+     actual1 = extract_title(text1)
+     
+     expected1 = "This is an h1 header"
+
+     self.assertEqual(actual1, expected1)
+     self.assertRaises(Exception, extract_title, text2)
 
 
 if(__name__ == "__main__"):

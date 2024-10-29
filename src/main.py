@@ -1,19 +1,65 @@
-from os import getcwd
+from os import *
+import shutil
 from textnode import *
 from constants import *
 from markdown_parser import *
+from pathlib import Path
+import builtins
 
 def main():
-    # Get file contents.
-    print(getcwd())
-    sample1_text = "".join(open(MARKDOWN_SAMPLE_DIR + "paired_down.md").readlines())
-    sample2_text = "".join(open(MARKDOWN_SAMPLE_DIR + "sample2.md").readlines())
+    clone_directory_contents("static", "public")
+    generate_page("content/index.md", "template.html", "public/index.html")
+    
+    print("FIN.")
 
-    # Drive the main parse method.
-    sample1_html = markdown_to_html_node(sample1_text)
-    # sample2_html = markdown_to_html_node(sample2_text)
+def clone_directory_contents(source_dir, dest_dir, prefix=""):
+    if(source_dir and dest_dir):
+        source_dir = path.realpath(source_dir)
+        dest_dir = path.realpath(dest_dir)
 
-    print("Finished Processing.")
+        if(path.exists(source_dir)):
+            print(f"{prefix}'{source_dir}' exists.")
+
+            if path.exists(dest_dir):
+                print(f"{prefix}Destination directory '{dest_dir}' exists. Wiping contents.")
+                shutil.rmtree(dest_dir)
+
+            print(f"{prefix}Created '{dest_dir}'.")
+            mkdir(dest_dir)
+            for entry in listdir(source_dir):
+                if(path.isfile(source_dir + "/" + entry)):
+                    print(f"{prefix}Copied file @ '{prefix}src: {source_dir}/{entry}' to '{dest_dir}/{entry}'")
+                    shutil.copy(source_dir + "/" + entry, dest_dir + "/" + entry)
+
+                elif(path.isdir(source_dir + "/" + entry)):
+                    print(f"{prefix}Found directory. Recursing.\n{prefix}src: {source_dir}/{entry}\n{prefix}dest: {dest_dir}/{entry}")
+                    clone_directory_contents(source_dir + "/" + entry, dest_dir + "/" + entry, (prefix + "\t"))
+
+        else:
+            print(f"{prefix}Fatal Error: '{source_dir}' doesn't exist. Can't clone directory.")
+
+def generate_page(from_path, template_path, dest_path):
+    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
+
+    from_content = ""
+    template_content = ""
+
+    with builtins.open(Path(from_path).resolve(), "r") as from_file:
+        from_content = from_file.read()
+
+    with builtins.open(Path(template_path).resolve(), "r") as template_file:
+        template_content = template_file.read()
+
+    if not path.exists(dest_path.rsplit("/", 1)[0]):
+        makedirs(dest_path.rsplit("/", 1)[0])
+    
+    title = extract_title(from_content)
+    from_html = markdown_to_html_node(from_content)
+    template_content = template_content.replace("{{ Title }}", title).replace("{{ Content }}", from_html.to_html())
+
+    dest_file = Path(dest_path).resolve()
+    #dest_file.parent.mkdir(exist_ok=True, parents=True)
+    dest_file.write_text(template_content)
 
 if(__name__ == "__main__"):
     main()
